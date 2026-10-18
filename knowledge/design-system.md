@@ -29,6 +29,12 @@ Status mapping: pending = warning, approved = success, rejected = error, always 
 - Dates in lists use `lib/leave/format.ts` (`formatDateRange`, `formatDateTime` in Asia/Manila), never raw ISO strings.
 - A role with a single destination (manager) has no bottom tab bar.
 
+## Loading states
+- Route level: a `loading.tsx` skeleton (see `app/(app)/audit/loading.tsx`) shows at once on navigation. It does not re-show when only the query string changes.
+- Form submits that change the query string (audit filters): `useTransition` + `router.push`; the button spins (`Button loading`), the inputs disable, an indeterminate `ProgressBar` runs and the report area becomes `AuditResultsSkeleton`. Announce it with an `aria-live` status.
+- Pager arrows show a spinner while their navigation is pending (`LinkPendingIcon`, `useLinkStatus`). Same size as the arrow, so nothing shifts.
+- All motion respects `prefers-reduced-motion` (`motion-reduce:animate-none`; the progress bar stays a still partial fill).
+
 ## Icons
 `@tabler/icons-react`, sizes 16 / 20 / 24.
 

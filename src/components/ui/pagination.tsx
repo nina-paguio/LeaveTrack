@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { LinkPendingIcon } from "@/components/ui/link-pending-icon";
 import { cn } from "@/lib/cn";
 
 export interface PaginationProps {
@@ -32,7 +33,7 @@ function Arrow({
   }
   return (
     <Link href={to} rel={direction} aria-label={label} className={cn(BOX, "hover:bg-primary-soft")}>
-      <Icon size={16} aria-hidden="true" />
+      <LinkPendingIcon direction={direction} />
     </Link>
   );
 }

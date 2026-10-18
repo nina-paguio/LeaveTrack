@@ -3,7 +3,12 @@ import { IconInbox, IconShieldLock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn("animate-pulse rounded-md bg-border", className)} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={cn("animate-pulse rounded-md bg-border motion-reduce:animate-none", className)}
+    />
+  );
 }
 
 export interface EmptyStateProps {
