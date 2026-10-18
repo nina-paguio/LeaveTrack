@@ -42,21 +42,22 @@ Copy `.env.example` to `.env.local`. Every variable is optional on Day 0.
 
 `supabase/` matches the ARCH data model:
 
-| File                                        | Purpose                                                                                                                          |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `migrations/0001_leave_domain.sql`          | 6 tables, delete/truncate blocking triggers, RLS on (deny by default)                                                            |
-| `migrations/0002_submit_leave_request.sql`  | `submit_leave_request()`: inserts a request and its audit row atomically; service_role only                                      |
-| `migrations/0003_team_leave_requests.sql`   | `team_leave_requests()`: the manager-scoped queue query; service_role only                                                       |
-| `migrations/0004_decide_leave_request.sql`  | `decide_leave_request()`: approve/reject atomically (scope, exactly-once, balance, audit); `decision_reason`; no self-management |
-| `migrations/0005_employee_audit_report.sql` | `employee_audit_report()`: one employee's decision history for HR; read-only; excludes soft-deleted; service_role only           |
-| `migrations/0006_monthly_accrual.sql`       | `run_monthly_accrual()`, the `last_accrued_month` marker and the `accrual_runs` log                                              |
-| `seed.sql`                                  | Reference data only (3 leave types). Safe in every environment.                                                                  |
-| `seed.dev.sql`                              | Mock users, policies, balances. **Dev only, never production.**                                                                  |
-| `verify-accrual.sql`                        | Rolled-back test of the accrual: exact amounts, same-month no-op, per-row marker, bad months, run log                            |
-| `verify-audit.sql`                          | Rolled-back test of the audit report: exactness, soft-delete exclusion, 3+ year retention, privacy, date range                   |
-| `verify-decide.sql`                         | Rolled-back test of approve, reject, scope, exactly-once, roles, Unpaid, day rule and self-approval                              |
-| `verify-team.sql`                           | Rolled-back scope test: exactly 5 reports, no leaks, request follows an employee who changes manager                             |
-| `verify.sql`                                | Read-only checks for TASK-010 acceptance criteria                                                                                |
+| File                                        | Purpose                                                                                                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `migrations/0001_leave_domain.sql`          | 6 tables, delete/truncate blocking triggers, RLS on (deny by default)                                                                                             |
+| `migrations/0002_submit_leave_request.sql`  | `submit_leave_request()`: inserts a request and its audit row atomically; service_role only                                                                       |
+| `migrations/0003_team_leave_requests.sql`   | `team_leave_requests()`: the manager-scoped queue query; service_role only                                                                                        |
+| `migrations/0004_decide_leave_request.sql`  | `decide_leave_request()`: approve/reject atomically (scope, exactly-once, balance, audit); `decision_reason`; no self-management                                  |
+| `migrations/0005_employee_audit_report.sql` | `employee_audit_report()`: one employee's decision history for HR; read-only; excludes soft-deleted; service_role only                                            |
+| `migrations/0006_monthly_accrual.sql`       | `run_monthly_accrual()`, the `last_accrued_month` marker and the `accrual_runs` log                                                                               |
+| `migrations/0007_notifications.sql`         | `notifications` table (RLS on); submit/decide now write the in-app notification; `my_notifications()`, `unread_notification_count()`, `mark_notifications_read()` |
+| `seed.sql`                                  | Reference data only (3 leave types). Safe in every environment.                                                                                                   |
+| `seed.dev.sql`                              | Mock users, policies, balances. **Dev only, never production.**                                                                                                   |
+| `verify-accrual.sql`                        | Rolled-back test of the accrual: exact amounts, same-month no-op, per-row marker, bad months, run log                                                             |
+| `verify-audit.sql`                          | Rolled-back test of the audit report: exactness, soft-delete exclusion, 3+ year retention, privacy, date range                                                    |
+| `verify-decide.sql`                         | Rolled-back test of approve, reject, scope, exactly-once, roles, Unpaid, day rule and self-approval                                                               |
+| `verify-team.sql`                           | Rolled-back scope test: exactly 5 reports, no leaks, request follows an employee who changes manager                                                              |
+| `verify.sql`                                | Read-only checks for TASK-010 acceptance criteria                                                                                                                 |
 
 Apply with the Supabase CLI against a **dev** project, using the session-mode pooler (port 5432 on the
 same pooler host). Transaction mode (6543) is for app traffic and can fail on migrations:

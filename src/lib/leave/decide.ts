@@ -66,8 +66,8 @@ export async function decideLeaveRequest(
   const outcome = await repo.decideRequest(manager.id, requestId, input);
   if (!outcome.ok) throw refusalError(outcome.refusal);
 
-  // "Notifies the employee" (US-03): no email/notification infrastructure yet, so a structured log
-  // line stands in for it (backlog #12). The audit row was written by the database function.
+  // "Notifies the employee" (US-03): decide_leave_request wrote the in-app notification (and the
+  // audit row) in the same transaction (migration 0007). This log line is for observability only.
   logger.info("leave_request_decided", {
     requestId,
     decision: input.decision,

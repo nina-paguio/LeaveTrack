@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAccess, isRole, navFor } from "@/lib/roles";
+import { canAccess, homeFor, isRole, navFor } from "@/lib/roles";
 import { teamRequestsFor } from "@/mocks/data";
 
 describe("roles", () => {
@@ -22,7 +22,10 @@ describe("roles", () => {
     expect(canAccess("/audit", "manager")).toBe(false);
     expect(canAccess("/leave/new", "employee")).toBe(true);
     expect(canAccess("/leave/new", "hr_admin")).toBe(false);
-    expect(canAccess("/dashboard", "employee")).toBe(true);
+    // the docs give submitting leave to Employees; a manager only approves
+    expect(canAccess("/leave/new", "manager")).toBe(false);
+    expect(canAccess("/leave/balance", "manager")).toBe(false);
+    expect(canAccess("/leave/requests", "manager")).toBe(false);
     // prefix match must not leak: "/auditing" is not "/audit"
     expect(canAccess("/auditing", "employee")).toBe(true);
   });
@@ -31,6 +34,36 @@ describe("roles", () => {
     for (const role of ["employee", "manager", "hr_admin"] as const) {
       for (const item of navFor(role)) expect(canAccess(item.href, role)).toBe(true);
     }
+  });
+});
+
+describe("landing pages and nav (the docs define no dashboard)", () => {
+  it("opens each role on its main task, and that role may open it", () => {
+    expect(homeFor("employee")).toBe("/leave/balance");
+    expect(homeFor("manager")).toBe("/team/requests");
+    expect(homeFor("hr_admin")).toBe("/audit");
+    for (const role of ["employee", "manager", "hr_admin"] as const) {
+      expect(canAccess(homeFor(role), role)).toBe(true);
+    }
+  });
+
+  it("links the landing page first and has no dashboard", () => {
+    for (const role of ["employee", "manager", "hr_admin"] as const) {
+      const items = navFor(role);
+      expect(items[0]?.href).toBe(homeFor(role));
+      expect(items.some((i) => i.href === "/dashboard")).toBe(false);
+    }
+    expect(navFor("manager").map((i) => i.href)).toEqual(["/team/requests", "/notifications"]);
+  });
+
+  it("gives notifications to employees and managers only (the docs name no HR notification)", () => {
+    expect(canAccess("/notifications", "employee")).toBe(true);
+    expect(canAccess("/notifications", "manager")).toBe(true);
+    expect(canAccess("/notifications", "hr_admin")).toBe(false);
+    expect(navFor("employee").map((i) => i.href)).toContain("/notifications");
+    expect(navFor("hr_admin").map((i) => i.href)).not.toContain("/notifications");
+    // the prefix match must not leak: "/notificationsx" is not "/notifications"
+    expect(canAccess("/notificationsx", "hr_admin")).toBe(true);
   });
 });
 

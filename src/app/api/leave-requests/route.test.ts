@@ -54,10 +54,12 @@ describe("POST /api/leave-requests", () => {
     expect(createRequest).not.toHaveBeenCalled();
   });
 
-  it("403s for an HR admin", async () => {
-    getSession.mockResolvedValue({ role: "hr_admin", user: { email: "hana@example.com" } });
-    const res = await post(body);
-    expect(res.status).toBe(403);
+  it("403s for an HR admin and for a manager (submitting is the Employee role's)", async () => {
+    for (const role of ["hr_admin", "manager"] as const) {
+      getSession.mockResolvedValue({ role, user: { email: "x@example.com" } });
+      const res = await post(body);
+      expect(res.status).toBe(403);
+    }
     expect(createRequest).not.toHaveBeenCalled();
   });
 
@@ -79,15 +81,13 @@ describe("POST /api/leave-requests", () => {
     expect(createRequest).not.toHaveBeenCalled();
   });
 
-  it("AC1: 201s with the pending request for an employee and for a manager", async () => {
-    for (const role of ["employee", "manager"] as const) {
-      getSession.mockResolvedValue({ role, user: { email: "ana@example.com" } });
-      const res = await post(body);
-      expect(res.status).toBe(201);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.data.request.status).toBe("pending");
-    }
-    expect(createRequest).toHaveBeenCalledTimes(2);
+  it("AC1: 201s with the pending request for an employee", async () => {
+    getSession.mockResolvedValue({ role: "employee", user: { email: "ana@example.com" } });
+    const res = await post(body);
+    expect(res.status).toBe(201);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.request.status).toBe("pending");
+    expect(createRequest).toHaveBeenCalledTimes(1);
   });
 });

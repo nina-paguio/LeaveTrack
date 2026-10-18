@@ -8,7 +8,8 @@ import { logger } from "@/lib/logger";
 import { getSession } from "@/lib/session";
 
 /**
- * - `scope=mine` (US-02): the caller's own requests and balances. Employees and managers.
+ * - `scope=mine` (US-02): the caller's own requests and balances. Employees only (the docs give
+ *   submitting and balances to the Employee role; a manager only approves).
  * - `scope=team` (US-04): requests from the caller's direct reports. Managers only.
  *
  * Identity comes only from the session, so no query parameter can select another user or team.
@@ -32,6 +33,10 @@ export async function GET(request: Request): Promise<Response> {
       return okResponse({ requests });
     }
 
+    if (scope === "mine" && session.role !== "employee") {
+      return errorResponse("FORBIDDEN", "You do not have access to this resource.", 403);
+    }
+
     if (scope !== "mine") {
       return errorResponse(
         "VALIDATION_ERROR",
@@ -47,12 +52,12 @@ export async function GET(request: Request): Promise<Response> {
   }
 }
 
-/** US-01: submit a leave request. Employees and managers only (managers are employees too). */
+/** US-01: submit a leave request. Employees only: the docs give submitting to the Employee role. */
 export async function POST(request: Request): Promise<Response> {
   try {
     const session = await getSession();
     if (!session) return errorResponse("UNAUTHENTICATED", "Authentication required.", 401);
-    if (session.role === "hr_admin") {
+    if (session.role !== "employee") {
       return errorResponse("FORBIDDEN", "You do not have access to this resource.", 403);
     }
 

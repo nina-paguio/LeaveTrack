@@ -1,24 +1,33 @@
-# Design system (provisional)
+# Design system
 
-No design export existed at scaffold time, so these tokens are placeholders. When a Figma or Claude-Design export arrives, replace the values in `src/app/globals.css` (`@theme`) and update this file.
+Tokens come from the Figma Make design (`design/make-export`, kept out of lint/build). Values live in `src/app/globals.css` (`@theme`); components use token names only.
 
 ## Tokens (HSL)
 
 | Token | Value |
 | --- | --- |
-| background | `hsl(210 20% 98%)` |
+| background | `hsl(200 43% 97%)` |
 | surface | `hsl(0 0% 100%)` |
-| foreground | `hsl(222 47% 11%)` |
-| muted | `hsl(215 16% 35%)` |
-| border | `hsl(214 32% 85%)` |
-| primary / hover / soft | `hsl(221 83% 45%)` / `hsl(221 83% 36%)` / `hsl(221 83% 96%)` |
-| success / soft | `hsl(142 71% 24%)` / `hsl(142 60% 93%)` |
-| warning / soft | `hsl(30 90% 26%)` / `hsl(45 95% 91%)` |
-| error / soft | `hsl(0 72% 40%)` / `hsl(0 85% 96%)` |
-| radius md / lg | 6px / 10px |
+| foreground | `hsl(197 44% 14%)` |
+| muted | `hsl(198 14% 43%)` |
+| border | `hsl(196 32% 88%)` |
+| primary / hover / soft | `hsl(195 91% 33%)` / `hsl(195 92% 27%)` / `hsl(194 73% 94%)` |
+| focus | `hsl(195 82% 43%)` |
+| success / soft | `hsl(151 54% 31%)` / `hsl(145 40% 94%)` |
+| warning / soft | `hsl(36 79% 34%)` / `hsl(43 100% 94%)` |
+| error / soft | `hsl(0 51% 46%)` / `hsl(0 73% 96%)` |
+| radius md / lg | 8px / 12px |
 | font | system UI stack (no network font fetch) |
 
+Primary is darkened from the design's `#087fa8` (4.39:1 with white) to reach 4.5:1 for button text. Every text/background pair is at least 4.5:1.
+
 Status mapping: pending = warning, approved = success, rejected = error, always with icon + text.
+
+## Layout and type rules
+- Page title `text-xl sm:text-2xl` semibold; section heading `text-base sm:text-lg`; body `text-sm`; muted text for secondary lines. Page rhythm: header `mb-5 sm:mb-6`, sections `mt-6 sm:mt-8`, card grids `gap-3 sm:gap-4`.
+- `DataTable` (`ui/data-table.tsx`): bordered table from `lg`, stacked cards below. Mark columns with `card`: `title`, `badge`, `line` (unlabelled), `footer` (actions) or omit for a label/value pair. A column that returns null shows "–" in the table and no row in the card.
+- Dates in lists use `lib/leave/format.ts` (`formatDateRange`, `formatDateTime` in Asia/Manila), never raw ISO strings.
+- A role with a single destination (manager) has no bottom tab bar.
 
 ## Icons
 `@tabler/icons-react`, sizes 16 / 20 / 24.
@@ -29,7 +38,7 @@ Status mapping: pending = warning, approved = success, rejected = error, always 
 - `leave/`: LeaveRequestForm, BalanceCard, RequestList, TeamQueue, AuditTable, PolicyTable
 
 ## Pages
-`/login`, `/dashboard`, `/leave/new`, `/leave/balance`, `/leave/requests`, `/team/requests`, `/team/requests/[id]`, `/audit`, `/admin/policies`.
+`/login`, `/leave/balance` (My leave: balance + requests, employee landing), `/leave/new`, `/team/requests` (Approvals, manager landing, 10 per page), `/team/requests/[id]`, `/audit` (HR landing), `/admin/policies`. No dashboard (the docs define none).
 
 ## Breakpoints
 Tailwind defaults, mobile-first. Verify at 320, 375, 768, 1024, 1440px.

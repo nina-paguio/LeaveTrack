@@ -78,16 +78,20 @@ describe("GET /api/leave-requests?scope=mine", () => {
     expect(listTeamRequests).not.toHaveBeenCalled();
   });
 
-  it("200s with requests and balances for an employee and a manager", async () => {
-    for (const role of ["employee", "manager"] as const) {
-      getSession.mockResolvedValue({ role, user: { email: "ana@example.com" } });
-      const res = await get("?scope=mine");
-      expect(res.status).toBe(200);
-      const json = await res.json();
-      expect(json.success).toBe(true);
-      expect(json.data.balances[0]).toMatchObject({ leaveTypeName: "Vacation", confirmed: 3 });
-      expect(json.data.requests).toEqual([]);
-    }
+  it("200s with requests and balances for an employee", async () => {
+    getSession.mockResolvedValue({ role: "employee", user: { email: "ana@example.com" } });
+    const res = await get("?scope=mine");
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data.balances[0]).toMatchObject({ leaveTypeName: "Vacation", confirmed: 3 });
+    expect(json.data.requests).toEqual([]);
+  });
+
+  it("403s for a manager: the docs give own leave and balance to employees only", async () => {
+    getSession.mockResolvedValue({ role: "manager", user: { email: "maria@example.com" } });
+    expect((await get("?scope=mine")).status).toBe(403);
+    expect(findUserByEmail).not.toHaveBeenCalled();
   });
 
   it("only ever reads the session user: a userId parameter has no effect", async () => {
