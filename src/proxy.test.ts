@@ -1,6 +1,11 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
+import { createSessionToken } from "@/lib/auth/session-token";
+import { env } from "@/lib/env";
 import { proxy } from "@/proxy";
+
+const cookieFor = (role: "employee" | "manager" | "hr_admin") =>
+  `${env.SESSION_COOKIE_NAME}=${createSessionToken({ email: `${role}@x.test`, role }, env.SESSION_SECRET ?? "", 3600)}`;
 
 const req = (path: string, cookie?: string) =>
   new NextRequest(`http://localhost${path}`, cookie ? { headers: { cookie } } : undefined);
@@ -45,11 +50,63 @@ describe("proxy: public paths (no login cookie)", () => {
   });
 });
 
+describe("proxy: signed-in landing pages", () => {
+  it("sends each role from /, /login and the removed /dashboard to its own home", () => {
+    const homes = {
+      employee: "/leave/balance",
+      manager: "/team/requests",
+      hr_admin: "/audit",
+    } as const;
+    for (const [role, home] of Object.entries(homes)) {
+      for (const path of ["/", "/login", "/dashboard"]) {
+        const res = proxy(req(path, cookieFor(role as "employee" | "manager" | "hr_admin")));
+        expect(res.status, `${role} ${path}`).toBe(307);
+        expect(res.headers.get("location")).toBe(`http://localhost${home}`);
+      }
+    }
+  });
+
+  it("keeps HR out of /notifications and sends them to their own home", () => {
+    const res = proxy(req("/notifications", cookieFor("hr_admin")));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost/audit");
+  });
+
+  it("lets employees and managers open /notifications", () => {
+    expect(passesThrough(proxy(req("/notifications", cookieFor("employee"))))).toBe(true);
+    expect(passesThrough(proxy(req("/notifications", cookieFor("manager"))))).toBe(true);
+  });
+
+  it("sends a role away from a page it may not open to its own home", () => {
+    const res = proxy(req("/leave/new", cookieFor("manager")));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toBe("http://localhost/team/requests");
+  });
+});
+
 describe("proxy: signed-in behaviour is unchanged", () => {
   it("passes an employee to their pages and blocks the HR API", () => {
-    expect(passesThrough(proxy(req("/leave/balance", "mock-role=employee")))).toBe(true);
+    expect(passesThrough(proxy(req("/leave/balance", cookieFor("employee"))))).toBe(true);
     expect(
-      proxy(req("/api/audit/6f1c2a3e-8b4d-4e5f-9a6b-1c2d3e4f5a6b", "mock-role=employee")).status,
+      proxy(req("/api/audit/6f1c2a3e-8b4d-4e5f-9a6b-1c2d3e4f5a6b", cookieFor("employee"))).status,
     ).toBe(403);
+  });
+});
+
+describe("proxy: forged cookies are signed out", () => {
+  it("rejects a bare role, an edited role and a tampered payload", async () => {
+    const good = cookieFor("employee");
+    const [body = "", mac = ""] = (good.split("=")[1] ?? "").split(".");
+    const forgedBody = Buffer.from(
+      JSON.stringify({ e: "a@b.test", r: "hr_admin", x: 9999999999 }),
+    ).toString("base64url");
+    for (const cookie of [
+      `${env.SESSION_COOKIE_NAME}=hr_admin`,
+      `${env.SESSION_COOKIE_NAME}=${forgedBody}.${mac}`,
+      `${env.SESSION_COOKIE_NAME}=${body}.AAAA`,
+    ]) {
+      const res = proxy(req("/api/leave-requests", cookie));
+      expect(res.status, cookie).toBe(401);
+    }
   });
 });

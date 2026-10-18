@@ -66,3 +66,24 @@ export interface BalanceView {
   /** First day of the latest month accrued into this balance (YYYY-MM-01), or null before the first accrual. */
   asOf: string | null;
 }
+
+export type NotificationKind = "request_submitted" | "request_approved" | "request_rejected";
+
+/** One in-app notification, already joined with the request it is about (see my_notifications). */
+export interface NotificationView {
+  id: string;
+  kind: NotificationKind;
+  createdAt: string;
+  /** null while unread */
+  readAt: string | null;
+  requestId: string;
+  /** Who the request belongs to. */
+  employeeName: string;
+  leaveTypeName: string;
+  startDate: string;
+  endDate: string;
+  /** The deciding manager; null until the request is decided. */
+  decidedByName: string | null;
+  /** Why it was rejected (a manager's text, which the employee is meant to see). */
+  decisionReason: string | null;
+}

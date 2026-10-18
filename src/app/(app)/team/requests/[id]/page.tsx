@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/feedback";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDateRange } from "@/lib/leave/format";
 import { loadTeamRequest } from "@/lib/leave/team-data";
 import { getSession } from "@/lib/session";
 
@@ -33,7 +34,7 @@ export default async function TeamRequestDetailPage({
         description="Only requests from your direct reports can be viewed."
         action={
           <Link href="/team/requests">
-            <Button variant="secondary">Back to team requests</Button>
+            <Button variant="secondary">Back to approvals</Button>
           </Link>
         }
       />
@@ -44,20 +45,20 @@ export default async function TeamRequestDetailPage({
   return (
     <>
       <PageHeader title="Request detail" />
-      <Card className="flex flex-col gap-2 text-sm">
-        <p>
-          <span className="text-muted">Employee:</span> {request.employeeName}
-        </p>
-        <p>
-          <span className="text-muted">Type:</span> {request.leaveTypeName}
-        </p>
-        <p>
-          <span className="text-muted">Dates:</span> {request.startDate} to {request.endDate}
-        </p>
-        <p>
-          <span className="text-muted">Reason:</span> {request.reason}
-        </p>
-        <StatusBadge status={request.status} />
+      <Card>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-semibold [overflow-wrap:anywhere]">{request.employeeName}</h2>
+            <p className="mt-0.5 text-sm text-muted">
+              {request.leaveTypeName} · {formatDateRange(request.startDate, request.endDate)}
+            </p>
+          </div>
+          <StatusBadge status={request.status} />
+        </div>
+        <dl className="mt-4 text-sm">
+          <dt className="text-muted">Reason</dt>
+          <dd className="mt-0.5 [overflow-wrap:anywhere]">{request.reason}</dd>
+        </dl>
       </Card>
     </>
   );

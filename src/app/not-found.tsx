@@ -9,8 +9,8 @@ export default function NotFound() {
         title="Page not found"
         description="The page you are looking for does not exist."
         action={
-          <Link href="/dashboard">
-            <Button>Back to dashboard</Button>
+          <Link href="/">
+            <Button>Back to home</Button>
           </Link>
         }
       />

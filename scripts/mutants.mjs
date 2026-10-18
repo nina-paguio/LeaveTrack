@@ -28,7 +28,9 @@ export const targets = {
   },
 
   decide: {
-    migration: "supabase/migrations/0004_decide_leave_request.sql",
+    // decide_leave_request is replaced in 0007 (same logic plus the notification insert), so the
+    // current definition, and what the mutants break, lives there.
+    migration: "supabase/migrations/0007_notifications.sql",
     fn: "decide_leave_request",
     test: "supabase/verify-decide.sql",
     mutants: {
@@ -192,6 +194,104 @@ export const targets = {
           "left join public.users d on d.id = r.decided_by",
           "join public.users d on d.id = r.decided_by",
         ),
+    },
+  },
+
+  // Notifications (migration 0007), all tested by supabase/verify-notifications.sql.
+  "notify-submit": {
+    migration: "supabase/migrations/0007_notifications.sql",
+    fn: "submit_leave_request",
+    test: "supabase/verify-notifications.sql",
+    mutants: {
+      "S1 submit writes no notification": (f) =>
+        f.replace(/insert into public\.notifications[\s\S]*?is not null;\n/, "null;\n"),
+      "S2 the employee is notified instead of their manager": (f) =>
+        f.replace(
+          "select u.manager_id, r.id, 'request_submitted'",
+          "select u.id, r.id, 'request_submitted'",
+        ),
+      "S3 notifies even with no manager (null recipient)": (f) =>
+        f.replace(" and u.manager_id is not null;", ";"),
+      "S4 wrong kind on submit": (f) => f.replace("'request_submitted'\n", "'request_approved'\n"),
+    },
+  },
+
+  "notify-decide": {
+    migration: "supabase/migrations/0007_notifications.sql",
+    fn: "decide_leave_request",
+    test: "supabase/verify-notifications.sql",
+    mutants: {
+      "N1 a decision writes no notification": (f) =>
+        f.replace(
+          /insert into public\.notifications[\s\S]*?'request_rejected'::public\.notification_kind end\);\n/,
+          "null;\n",
+        ),
+      "N2 the manager is notified instead of the employee": (f) =>
+        f.replace(
+          "values (r.user_id, r.id, case when p_decision",
+          "values (p_manager_id, r.id, case when p_decision",
+        ),
+      "N3 approve is reported as a rejection": (f) =>
+        f.replace(
+          "then 'request_approved'::public.notification_kind",
+          "then 'request_rejected'::public.notification_kind",
+        ),
+      "N4 reject is reported as an approval": (f) =>
+        f.replace(
+          "else 'request_rejected'::public.notification_kind end);",
+          "else 'request_approved'::public.notification_kind end);",
+        ),
+    },
+  },
+
+  "notify-list": {
+    migration: "supabase/migrations/0007_notifications.sql",
+    fn: "my_notifications",
+    test: "supabase/verify-notifications.sql",
+    mutants: {
+      "L1 lists everyone's notifications (no recipient filter)": (f) =>
+        f.replace("where n.user_id = p_user_id", "where true"),
+      "L2 lists the wrong person's (the request owner's)": (f) =>
+        f.replace("where n.user_id = p_user_id", "where r.user_id = p_user_id"),
+      "L3 soft-deleted requests are listed": (f) =>
+        f.replace(
+          "on r.id = n.leave_request_id and not r.is_deleted",
+          "on r.id = n.leave_request_id",
+        ),
+    },
+  },
+
+  "notify-count": {
+    migration: "supabase/migrations/0007_notifications.sql",
+    fn: "unread_notification_count",
+    test: "supabase/verify-notifications.sql",
+    mutants: {
+      "C1 counts everyone's unread (no recipient filter)": (f) =>
+        f.replace(
+          "where n.user_id = p_user_id\n     and n.read_at is null",
+          "where n.read_at is null",
+        ),
+      "C2 counts read notifications too": (f) =>
+        f.replace(
+          "where n.user_id = p_user_id\n     and n.read_at is null",
+          "where n.user_id = p_user_id",
+        ),
+      "C3 counts soft-deleted requests": (f) =>
+        f.replace(
+          "on r.id = n.leave_request_id and not r.is_deleted",
+          "on r.id = n.leave_request_id",
+        ),
+    },
+  },
+
+  "notify-read": {
+    migration: "supabase/migrations/0007_notifications.sql",
+    fn: "mark_notifications_read",
+    test: "supabase/verify-notifications.sql",
+    mutants: {
+      "M1 marks everyone's notifications read (no recipient filter)": (f) =>
+        f.replace("where user_id = p_user_id and read_at is null", "where read_at is null"),
+      "M2 marks nothing read": (f) => f.replace("set read_at = now()", "set read_at = null"),
     },
   },
 };

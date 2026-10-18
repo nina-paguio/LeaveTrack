@@ -14,9 +14,30 @@
 // Limit: this is Chrome's emulation, not an iPhone. It measures layout reliably; it cannot show the
 // real iOS focus-zoom or the native date-picker UI. The 16px rule is the known criterion for the zoom.
 import { spawn } from "node:child_process";
+import { createHmac } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+// The app's session cookie is signed, so the checker signs one with the same SESSION_SECRET
+// (export it for this script and for the running server).
+const SESSION_SECRET = process.env.SESSION_SECRET ?? "";
+const COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? "leavetrack-session";
+const EMAIL_BY_ROLE = {
+  employee: "ana@example.com",
+  manager: "maria@example.com",
+  hr_admin: "hana@example.com",
+};
+function sessionCookieFor(role) {
+  if (SESSION_SECRET.length < 32) {
+    throw new Error("Set SESSION_SECRET (32+ chars, same value as the running server).");
+  }
+  const x = Math.floor(Date.now() / 1000) + 3600;
+  const body = Buffer.from(JSON.stringify({ e: EMAIL_BY_ROLE[role], r: role, x })).toString(
+    "base64url",
+  );
+  return `${body}.${createHmac("sha256", SESSION_SECRET).update(body).digest("base64url")}`;
+}
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const CHROME =
@@ -111,13 +132,16 @@ function measure(W, hasShell) {
     (n) => getComputedStyle(n).position === "fixed",
   );
   const bottomNavVisible = !!bottomNav && visible(bottomNav);
+  const navLinks = aside ? aside.querySelectorAll("nav a").length : 0;
   const tablesVisible = [...document.querySelectorAll("table")].filter(visible).length;
   const layoutProblems = [];
   if (!hasShell) {
     // a page outside the app shell (the sign-in page) has no sidebar or bottom bar to check
   } else if (phone) {
     if (sidebarVisible) layoutProblems.push("desktop sidebar is showing on a phone");
-    if (!bottomNavVisible) layoutProblems.push("mobile bottom bar is missing on a phone");
+    // a role with a single destination (the manager) has no tab bar by design
+    if (!bottomNavVisible && navLinks > 1)
+      layoutProblems.push("mobile bottom bar is missing on a phone");
     if (tablesVisible > 0) layoutProblems.push(`${tablesVisible} <table> showing on a phone`);
   } else {
     if (!sidebarVisible) layoutProblems.push("sidebar is missing on a wide screen");
@@ -130,6 +154,8 @@ function measure(W, hasShell) {
     const barTop = bottomNav.getBoundingClientRect().top;
     let lowest = 0;
     for (const el of document.querySelectorAll("main *")) {
+      // A modal <dialog> is in the top layer, above the bottom bar: it cannot be hidden by it.
+      if (el.closest("dialog")) continue;
       const r = el.getBoundingClientRect();
       if (r.width > 2 && r.height > 2 && visible(el)) lowest = Math.max(lowest, r.bottom);
     }
@@ -185,6 +211,19 @@ const ACTIONS = {
 };
 
 Object.assign(ACTIONS, {
+  // Over-balance, everything else filled in, Submit pressed: the confirmation dialog opens (nothing is sent).
+  overBalanceConfirm: () => {
+    const set = (id, v) => {
+      const el = document.getElementById(id);
+      Object.getOwnPropertyDescriptor(el.constructor.prototype, "value").set.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+    set("startDate", "2026-12-01");
+    set("endDate", "2026-12-03");
+    set("reason", "Family trip");
+    setTimeout(() => document.querySelector('main form button[type="submit"]').click(), 50);
+  },
   // A long multi-word Filipino-style name in the header.
   longName: () => {
     document.querySelector("header p.ml-auto span").textContent =
@@ -201,6 +240,7 @@ const EXPECT_TEXT = {
   empty: "This field is required.",
   reversed: "End date cannot be before the start date.",
   overBalance: "for HR override",
+  overBalanceConfirm: "Submit anyway",
 };
 
 // ----------------------------------------------------------------------------------------------
@@ -298,11 +338,11 @@ const SCENARIOS = [
     path: "/leave/new",
     role: "employee",
     name: "submit-form",
-    states: ["empty", "reversed", "overBalance", "longName", "longToken"],
+    states: ["empty", "reversed", "overBalance", "overBalanceConfirm", "longName", "longToken"],
   },
-  { path: "/leave/new", role: "manager", name: "submit-form", states: [] },
   { path: "/leave/balance", role: "employee", name: "balance", states: [] },
-  { path: "/leave/balance", role: "manager", name: "balance", states: [] },
+  { path: "/notifications", role: "employee", name: "notifications", states: [] },
+  { path: "/notifications", role: "manager", name: "notifications", states: [] },
 ];
 
 // --shared: the other pages that use the same controls (controlClass). A change to the shared control
@@ -352,12 +392,12 @@ async function main() {
         await cdp.send("Network.clearBrowserCookies");
         if (sc.role) {
           const cookie = await cdp.send("Network.setCookie", {
-            name: "mock-role",
-            value: sc.role,
+            name: COOKIE_NAME,
+            value: sessionCookieFor(sc.role),
             url: BASE,
             path: "/",
           });
-          if (!cookie.success) throw new Error(`Chrome refused the mock-role cookie for ${BASE}`);
+          if (!cookie.success) throw new Error(`Chrome refused the session cookie for ${BASE}`);
         }
 
         for (const state of [null, ...(W === 320 || W === 375 ? sc.states : [])]) {

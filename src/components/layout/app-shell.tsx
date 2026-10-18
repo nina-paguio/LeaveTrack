@@ -1,31 +1,41 @@
 import type { ReactNode } from "react";
 import { IconLogout } from "@tabler/icons-react";
 import { logoutAction } from "@/app/(auth)/actions";
-import { NavLinks } from "@/components/layout/nav-links";
+import { NavLinksLive } from "@/components/layout/nav-links-live";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { navFor, ROLE_LABELS } from "@/lib/roles";
 import type { Role } from "@/types/domain";
 
 export interface AppShellProps {
   role: Role;
   userName: string;
+  /** Unread notifications for the nav badge. A promise so the page never waits for it; it must not reject. */
+  unreadNotifications?: Promise<number>;
   children: ReactNode;
 }
 
 /** Sidebar from md up, bottom tab bar below md (BR-05: mobile-first). */
-export function AppShell({ role, userName, children }: AppShellProps) {
+export function AppShell({
+  role,
+  userName,
+  unreadNotifications = Promise.resolve(0),
+  children,
+}: AppShellProps) {
   const items = navFor(role);
+  // One destination needs no tab bar: the role's only page is already open.
+  const showBottomBar = items.length > 1;
 
   return (
     <div className="min-h-dvh md:grid md:grid-cols-[16rem_1fr]">
       <aside className="hidden border-r border-border bg-surface p-4 md:flex md:flex-col md:gap-6">
         <p className="px-3 text-lg font-semibold text-primary">LeaveTrack</p>
         <nav aria-label="Main">
-          <NavLinks items={items} variant="sidebar" />
+          <NavLinksLive items={items} variant="sidebar" unread={unreadNotifications} />
         </nav>
       </aside>
 
-      <div className="flex min-w-0 flex-col pb-16 md:pb-0">
+      <div className={cn("flex min-w-0 flex-col md:pb-0", showBottomBar && "pb-16")}>
         <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
           <p className="shrink-0 font-semibold text-primary md:hidden">LeaveTrack</p>
           {/* min-w-0 + truncate: a long name or a larger system text size shrinks this, instead of
@@ -48,12 +58,14 @@ export function AppShell({ role, userName, children }: AppShellProps) {
         </main>
       </div>
 
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface md:hidden"
-      >
-        <NavLinks items={items} variant="bottom" />
-      </nav>
+      {showBottomBar ? (
+        <nav
+          aria-label="Main"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface md:hidden"
+        >
+          <NavLinksLive items={items} variant="bottom" unread={unreadNotifications} />
+        </nav>
+      ) : null}
     </div>
   );
 }

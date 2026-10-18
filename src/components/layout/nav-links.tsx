@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  IconBell,
   IconCalendarPlus,
   IconChecklist,
   IconClipboardCheck,
-  IconLayoutDashboard,
-  IconListDetails,
   IconScale,
   IconSettings,
 } from "@tabler/icons-react";
@@ -15,14 +14,31 @@ import { cn } from "@/lib/cn";
 import type { NavItem } from "@/lib/roles";
 
 const ICONS: Record<NavItem["icon"], typeof IconScale> = {
-  dashboard: IconLayoutDashboard,
   new: IconCalendarPlus,
   balance: IconScale,
-  requests: IconListDetails,
   team: IconChecklist,
   audit: IconClipboardCheck,
   policies: IconSettings,
+  notifications: IconBell,
 };
+
+/** A number, never color alone, plus a spoken form for screen readers. */
+function Badge({ count, floating = false }: { count: number; floating?: boolean }) {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold leading-5 text-white",
+          floating ? "absolute -right-2.5 -top-1.5" : "ml-auto",
+        )}
+      >
+        {count > 99 ? "99+" : count}
+      </span>
+      <span className="sr-only">, {count} unread</span>
+    </>
+  );
+}
 
 export interface NavLinksProps {
   items: NavItem[];
@@ -52,8 +68,12 @@ export function NavLinks({ items, variant }: NavLinksProps) {
                 active ? "bg-primary-soft text-primary" : "text-muted hover:bg-primary-soft",
               )}
             >
-              <Icon size={variant === "sidebar" ? 20 : 24} aria-hidden="true" />
+              <span className="relative inline-flex">
+                <Icon size={variant === "sidebar" ? 20 : 24} aria-hidden="true" />
+                {item.badge && variant === "bottom" ? <Badge count={item.badge} floating /> : null}
+              </span>
               {item.label}
+              {item.badge && variant === "sidebar" ? <Badge count={item.badge} /> : null}
             </Link>
           </li>
         );

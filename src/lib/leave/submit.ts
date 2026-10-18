@@ -79,8 +79,8 @@ export async function submitLeaveRequest(
 
   const request = await repo.createRequest(user.id, input);
 
-  // "Notifies the manager" (AC1): the audit row is written by the database function; there is no
-  // email/notification infrastructure yet, so a structured log line is the notification for now.
+  // "Notifies the manager" (AC1): submit_leave_request wrote the in-app notification (and the audit
+  // row) in the same transaction (migration 0007). This log line is for observability only.
   logger.info("leave_request_submitted", {
     requestId: request.id,
     managerId: user.managerId,

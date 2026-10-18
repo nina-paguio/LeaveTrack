@@ -9,6 +9,7 @@ import { describedBy, FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast";
+import { formatDateRange } from "@/lib/leave/format";
 import type { LeaveRequest } from "@/types/domain";
 
 export interface TeamQueueRow extends LeaveRequest {
@@ -61,26 +62,54 @@ export function TeamQueue({ requests, onDecision }: TeamQueueProps) {
   }
 
   const columns: Column<TeamQueueRow>[] = [
-    { key: "employee", header: "Employee", render: (r) => r.employeeName },
-    { key: "type", header: "Type", render: (r) => r.leaveTypeName },
-    { key: "dates", header: "Dates", render: (r) => `${r.startDate} to ${r.endDate}` },
-    { key: "status", header: "Status", render: (r) => <StatusBadge status={r.status} /> },
+    { key: "employee", header: "Employee", card: "title", render: (r) => r.employeeName },
+    { key: "type", header: "Type", card: "line", render: (r) => r.leaveTypeName },
+    {
+      key: "dates",
+      header: "Dates",
+      card: "line",
+      render: (r) => formatDateRange(r.startDate, r.endDate),
+    },
+    {
+      key: "reason",
+      header: "Reason",
+      card: "line",
+      render: (r) => (
+        <span className="block max-w-prose text-foreground [overflow-wrap:anywhere]">
+          {r.reason}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      card: "badge",
+      render: (r) => <StatusBadge status={r.status} />,
+    },
     {
       key: "actions",
       header: "Decision",
+      card: "footer",
       render: (r) =>
         r.status === "pending" ? (
-          <div className="flex justify-end gap-2">
-            <Button loading={busyId === r.id} onClick={() => decide(r, "approved")}>
+          <div className="flex gap-2 lg:justify-end">
+            <Button
+              className="flex-1 lg:flex-none"
+              loading={busyId === r.id}
+              onClick={() => decide(r, "approved")}
+            >
               Approve
             </Button>
-            <Button variant="secondary" disabled={busyId === r.id} onClick={() => setRejecting(r)}>
+            <Button
+              className="flex-1 lg:flex-none"
+              variant="secondary"
+              disabled={busyId === r.id}
+              onClick={() => setRejecting(r)}
+            >
               Reject
             </Button>
           </div>
-        ) : (
-          <span className="text-muted">Decided</span>
-        ),
+        ) : null,
     },
   ];
 

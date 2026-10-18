@@ -8,5 +8,5 @@ export default defineConfig([
   { rules: { "no-console": "error" } },
   // Command-line scripts exist to print; the ban stays on for all app code.
   { files: ["scripts/**"], rules: { "no-console": "off" } },
-  globalIgnores([".next/**", "out/**", "build/**", "coverage/**", "next-env.d.ts"]),
+  globalIgnores(["design/**", ".next/**", "out/**", "build/**", "coverage/**", "next-env.d.ts"]),
 ]);

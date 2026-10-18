@@ -4,6 +4,7 @@ import type { AccrualRepo, AccrualResult } from "@/lib/leave/accrual";
 import type { AuditEntry, AuditRepo, AuditSubject } from "@/lib/leave/audit";
 import type { DecideOutcome, DecideRepo, DecisionRefusal } from "@/lib/leave/decide";
 import type { MineRepo } from "@/lib/leave/mine";
+import type { NotificationRepo } from "@/lib/leave/notifications";
 import type { CreatedRequest, LeaveRepo, RepoLeaveType, RepoUser } from "@/lib/leave/submit";
 import type { TeamRepo } from "@/lib/leave/team";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -81,6 +82,20 @@ const auditRow = z.object({
   decision_reason: z.string().nullable(),
 });
 
+const notificationRow = z.object({
+  id: z.uuid(),
+  kind: z.enum(["request_submitted", "request_approved", "request_rejected"]),
+  created_at: z.string(),
+  read_at: z.string().nullable(),
+  leave_request_id: z.uuid(),
+  employee_name: z.string(),
+  leave_type_name: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  decided_by_name: z.string().nullable(),
+  decision_reason: z.string().nullable(),
+});
+
 const DECISION_REFUSALS = [
   "NOT_FOUND",
   "FORBIDDEN",
@@ -105,10 +120,45 @@ export function createLeaveRepo(): LeaveRepo &
   TeamRepo &
   DecideRepo &
   AuditRepo &
-  AccrualRepo {
+  AccrualRepo &
+  NotificationRepo {
   const db = getSupabaseAdmin();
 
   return {
+    /** The recipient filter is inside my_notifications (migration 0007), not here. */
+    async listNotifications(userId) {
+      const { data, error } = await db.rpc("my_notifications", { p_user_id: userId });
+      if (error) fail("listNotifications", error.message);
+      return z
+        .array(notificationRow)
+        .parse(data)
+        .map((n) => ({
+          id: n.id,
+          kind: n.kind,
+          createdAt: n.created_at,
+          readAt: n.read_at,
+          requestId: n.leave_request_id,
+          employeeName: n.employee_name,
+          leaveTypeName: n.leave_type_name,
+          startDate: n.start_date,
+          endDate: n.end_date,
+          decidedByName: n.decided_by_name,
+          decisionReason: n.decision_reason,
+        }));
+    },
+
+    async countUnread(userId) {
+      const { data, error } = await db.rpc("unread_notification_count", { p_user_id: userId });
+      if (error) fail("countUnread", error.message);
+      return z.number().int().parse(data);
+    },
+
+    async markAllRead(userId) {
+      const { data, error } = await db.rpc("mark_notifications_read", { p_user_id: userId });
+      if (error) fail("markAllRead", error.message);
+      return z.number().int().parse(data);
+    },
+
     /** The manager scope is applied inside the SQL function (migration 0003), not here. */
     async listTeamRequests(managerId) {
       const { data, error } = await db.rpc("team_leave_requests", { p_manager_id: managerId });

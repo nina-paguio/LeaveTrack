@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
+import { verifySessionToken } from "@/lib/auth/session-token";
 import { env } from "@/lib/env";
-import { isRole } from "@/lib/roles";
-import { MOCK_USER_BY_ROLE, userById } from "@/mocks/data";
+import { users } from "@/mocks/data";
 import type { Role, User } from "@/types/domain";
 
 export interface Session {
@@ -10,13 +10,20 @@ export interface Session {
 }
 
 /**
- * Mock session (ADR-LeaveTrack-E001): the cookie only holds a role.
- * Day 1 changes how the cookie is set, not how it is read.
+ * Reads the signed session cookie set by loginAction. The role and email come from the signed
+ * payload (so they cannot be edited); routes still re-check the database role.
+ * `user` is the matching mock profile for display, or a bare profile when there is none.
  */
 export async function getSession(): Promise<Session | null> {
   const store = await cookies();
-  const role = store.get(env.SESSION_COOKIE_NAME)?.value;
-  if (!isRole(role)) return null;
-  const user = userById(MOCK_USER_BY_ROLE[role]);
-  return user ? { role, user } : null;
+  const claims = verifySessionToken(store.get(env.SESSION_COOKIE_NAME)?.value, env.SESSION_SECRET);
+  if (!claims) return null;
+  const user = users.find((u) => u.email.toLowerCase() === claims.email) ?? {
+    id: claims.email,
+    name: claims.email,
+    email: claims.email,
+    role: claims.role,
+    managerId: null,
+  };
+  return { role: claims.role, user };
 }
