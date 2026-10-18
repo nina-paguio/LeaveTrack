@@ -1,0 +1,8 @@
+# One line-ending style for every contributor (Prettier writes LF).
+* text=auto eol=lf
+
+# Binary files: never convert.
+*.png binary
+*.ico binary
+*.jpg binary
+*.woff2 binary

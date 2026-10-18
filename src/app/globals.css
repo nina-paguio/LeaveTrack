@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Provisional tokens: no design export exists yet. Replace when one is provided. HSL only. */
+@theme {
+  --color-background: hsl(210 20% 98%);
+  --color-surface: hsl(0 0% 100%);
+  --color-foreground: hsl(222 47% 11%);
+  --color-muted: hsl(215 16% 35%);
+  --color-border: hsl(214 32% 85%);
+
+  --color-primary: hsl(221 83% 45%);
+  --color-primary-hover: hsl(221 83% 36%);
+  --color-primary-soft: hsl(221 83% 96%);
+
+  --color-success: hsl(142 71% 24%);
+  --color-success-soft: hsl(142 60% 93%);
+  --color-warning: hsl(30 90% 26%);
+  --color-warning-soft: hsl(45 95% 91%);
+  --color-error: hsl(0 72% 40%);
+  --color-error-soft: hsl(0 85% 96%);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --shadow-card: 0 1px 2px hsl(222 47% 11% / 0.06), 0 1px 3px hsl(222 47% 11% / 0.1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

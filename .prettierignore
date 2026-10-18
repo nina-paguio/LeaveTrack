@@ -1,0 +1,10 @@
+.next
+node_modules
+coverage
+package-lock.json
+docs
+supabase
+knowledge
+.claude
+graphify-out
+.agents

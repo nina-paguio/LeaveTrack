@@ -1,0 +1,43 @@
+# dependencies
+node_modules
+
+# build outputs
+.next
+out
+build
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# env (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# vercel
+.vercel
+
+# local Claude Code settings
+.claude/settings.local.json
+
+# local measurement output (scripts/viewport-check.mjs)
+tmp/
+
+# generated code knowledge graph (rebuilt by `graphify update .`)
+graphify-out/
+
+# Supabase CLI scratch files (version cache, link state)
+supabase/.temp/
+
+# Third-party agent skill docs
+.agents/
