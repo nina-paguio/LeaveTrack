@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition, type FormEvent, type ReactNode } from "react";
+import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import { IconLoader2 } from "@tabler/icons-react";
 import { AuditResultsSkeleton } from "@/components/leave/audit-skeleton";
 import { Button } from "@/components/ui/button";
 import { DateField, Select } from "@/components/ui/controls";
@@ -18,27 +19,35 @@ export interface AuditFiltersProps {
   children: ReactNode;
 }
 
-const text = (v: FormDataEntryValue | null) => (typeof v === "string" ? v : "");
-
 /**
  * The filter form plus the report area. It is still a plain GET form (it works without JavaScript);
  * with JavaScript the submit becomes a client navigation so the page can show that it is working: the
- * button spins, a progress bar runs and the old report gives way to a skeleton until the new one
- * arrives. The report itself is always read on the server for one employee, never filtered here.
+ * button shows a spinner, a progress bar runs and the old report gives way to a skeleton until the new
+ * one arrives. The report itself is always read on the server for one employee, never filtered here.
+ *
+ * Two things keep it usable with a keyboard and honest about the URL:
+ * - The inputs follow the URL (controlled, re-synced when the filters in the URL change), so after
+ *   Back/Forward the form always shows what the table shows.
+ * - Nothing the user is focused on is disabled while loading (that would drop focus to the page). The
+ *   button uses aria-disabled and a second submit is ignored while one is running.
  */
 export function AuditFilters({ employees, selectedId, from, to, children }: AuditFiltersProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [values, setValues] = useState({ userId: selectedId, from, to });
+  const [synced, setSynced] = useState({ selectedId, from, to });
+
+  // Re-sync the inputs when the URL's filters change (Back/Forward). Done during render, the
+  // documented alternative to an effect, so there is no flash of stale values.
+  if (synced.selectedId !== selectedId || synced.from !== from || synced.to !== to) {
+    setSynced({ selectedId, from, to });
+    setValues({ userId: selectedId, from, to });
+  }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const href = auditHref({
-      userId: text(data.get("userId")),
-      from: text(data.get("from")),
-      to: text(data.get("to")),
-    });
-    startTransition(() => router.push(href));
+    if (pending) return;
+    startTransition(() => router.push(auditHref(values)));
   }
 
   return (
@@ -55,9 +64,9 @@ export function AuditFilters({ employees, selectedId, from, to, children }: Audi
             <Select
               id="audit-employee"
               name="userId"
-              defaultValue={selectedId}
+              value={values.userId}
+              onChange={(e) => setValues((v) => ({ ...v, userId: e.target.value }))}
               required
-              disabled={pending}
             >
               <option value="">Choose an employee</option>
               {employees.map((e) => (
@@ -69,12 +78,33 @@ export function AuditFilters({ employees, selectedId, from, to, children }: Audi
           </FormField>
         </div>
         <FormField id="audit-from" label="From">
-          <DateField id="audit-from" name="from" defaultValue={from} disabled={pending} />
+          <DateField
+            id="audit-from"
+            name="from"
+            value={values.from}
+            onChange={(e) => setValues((v) => ({ ...v, from: e.target.value }))}
+          />
         </FormField>
         <FormField id="audit-to" label="To">
-          <DateField id="audit-to" name="to" defaultValue={to} disabled={pending} />
+          <DateField
+            id="audit-to"
+            name="to"
+            value={values.to}
+            onChange={(e) => setValues((v) => ({ ...v, to: e.target.value }))}
+          />
         </FormField>
-        <Button type="submit" loading={pending} className="col-span-2 sm:col-span-1">
+        <Button
+          type="submit"
+          aria-disabled={pending}
+          className="col-span-2 aria-disabled:cursor-wait aria-disabled:opacity-70 sm:col-span-1"
+        >
+          {pending ? (
+            <IconLoader2
+              size={16}
+              aria-hidden="true"
+              className="animate-spin motion-reduce:animate-none"
+            />
+          ) : null}
           Run report
         </Button>
       </form>
