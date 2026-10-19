@@ -11,11 +11,6 @@ describe("auditHref", () => {
     expect(auditHref({ userId: "u-1", from: "", to: "" })).toBe("/audit?userId=u-1");
   });
 
-  it("only adds a page after the first", () => {
-    expect(auditHref({ userId: "u-1", page: 1 })).toBe("/audit?userId=u-1");
-    expect(auditHref({ userId: "u-1", page: 3 })).toBe("/audit?userId=u-1&page=3");
-  });
-
   it("encodes values so a crafted filter cannot add parameters", () => {
     expect(auditHref({ userId: "a&page=9" })).toBe("/audit?userId=a%26page%3D9");
   });

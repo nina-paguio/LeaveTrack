@@ -51,6 +51,7 @@ Copy `.env.example` to `.env.local`. Every variable is optional on Day 0.
 | `migrations/0005_employee_audit_report.sql` | `employee_audit_report()`: one employee's decision history for HR; read-only; excludes soft-deleted; service_role only                                            |
 | `migrations/0006_monthly_accrual.sql`       | `run_monthly_accrual()`, the `last_accrued_month` marker and the `accrual_runs` log                                                                               |
 | `migrations/0007_notifications.sql`         | `notifications` table (RLS on); submit/decide now write the in-app notification; `my_notifications()`, `unread_notification_count()`, `mark_notifications_read()` |
+| `migrations/0008_retention.sql`             | `soft_delete_expired_requests()`: soft-deletes requests decided more than 3 years ago (rows stay; the app stops showing them); service_role only                  |
 | `seed.sql`                                  | Reference data only (3 leave types). Safe in every environment.                                                                                                   |
 | `seed.dev.sql`                              | Mock users, policies, balances. **Dev only, never production.**                                                                                                   |
 | `verify-accrual.sql`                        | Rolled-back test of the accrual: exact amounts, same-month no-op, per-row marker, bad months, run log                                                             |

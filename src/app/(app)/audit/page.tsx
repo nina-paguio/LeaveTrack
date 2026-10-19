@@ -4,11 +4,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { AuditFilters } from "@/components/leave/audit-filters";
 import { AuditTable } from "@/components/leave/audit-table";
 import { Alert } from "@/components/ui/feedback";
-import { Pagination } from "@/components/ui/pagination";
 import { homeFor } from "@/lib/roles";
-import { auditHref } from "@/lib/leave/audit-query";
 import { loadAudit } from "@/lib/leave/audit-data";
-import { paginate } from "@/lib/paginate";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Audit report" };
@@ -16,7 +13,7 @@ export const metadata: Metadata = { title: "Audit report" };
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ userId?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{ userId?: string; from?: string; to?: string }>;
 }) {
   const session = await getSession();
   if (!session) return null;
@@ -25,9 +22,6 @@ export default async function AuditPage({
 
   const params = await searchParams;
   const data = await loadAudit(session, params);
-  const { items, page, pageCount } = paginate(data.rows, params.page);
-  const hrefFor = (n: number) =>
-    auditHref({ userId: params.userId, from: data.from, to: data.to, page: n });
 
   return (
     <>
@@ -43,16 +37,7 @@ export default async function AuditPage({
         from={data.from}
         to={data.to}
       >
-        <AuditTable
-          selected={data.selected}
-          rows={items}
-          pager={
-            data.rows.length > 0 ? (
-              <Pagination page={page} pageCount={pageCount} hrefFor={hrefFor} />
-            ) : null
-          }
-          problem={data.problem}
-        />
+        <AuditTable selected={data.selected} rows={data.rows} problem={data.problem} />
       </AuditFilters>
     </>
   );

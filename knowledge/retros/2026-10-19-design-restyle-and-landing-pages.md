@@ -66,3 +66,46 @@ dashboard, so each role lands on its main task (`homeFor` in `lib/roles.ts`).
 - **Pattern**: a mutation target for a function that is replaced by a later migration must point at the
   migration that currently defines it (decide moved from 0004 to 0007); the harness now accepts
   `create or replace function`.
+
+## Audit report loading states (validate)
+- **Backlog (low, from code review)**: `loading.tsx` announces twice (status region plus progressbar label);
+  the pager spinner (`LinkPendingIcon`) is visual only, with no `aria-busy`/announcement; no component
+  tests for `AuditFilters`, `LinkPendingIcon`, `ProgressBar`; re-running identical filters adds a history
+  entry and may be served from the client router cache (unverified).
+- **Not exercised**: the pager spinner and filter-preserving pager links on a real multi-page audit list
+  (the live data is one page); only `auditHref` is unit-tested for that.
+- **Pattern**: a controlled form that must follow the URL (Back/Forward, pager) re-syncs its state during
+  render by comparing previous props, not with an effect or a remount `key` (a remount drops focus).
+- **Pattern**: never `disabled` a control the user is focused on while loading (focus falls to the page);
+  use `aria-disabled` plus an ignore-while-pending guard, and keep a spinner for sighted users.
+- **Pattern**: prove loading UI in real Chrome with CDP `Network.emulateNetworkConditions` (latency) and a
+  mid-load DOM/screenshot snapshot. Gotchas: attach the WebSocket `open` listener only if
+  `readyState !== 1`; macOS has no `timeout` (use a background process plus a kill loop).
+
+## Retention and the one-page audit report (ADR-LeaveTrack-E005)
+- **Migration 0008 is not applied until the user approves it**; verify-retention.sql and
+  `mutate-sql.mjs retention` only mean something once it is.
+- **Reverses an earlier decision** ("the audit has no age limit"): HR can no longer see requests decided
+  more than 3 years ago in the app. Legal/compliance should confirm. No screen to view or restore archived
+  records; reversal is `is_deleted = false` in the database.
+- **Docs are silent on removal after 3 years**: counting from the decision date and leaving pending
+  requests are team decisions to confirm with the BA.
+- **The audit report is one page with no cap**; retention bounds it to about 3 years per employee. A very
+  busy employee could still make a long page on a phone.
+- **Docs are silent on balance carry-over**: balances keep stacking monthly with no year-end reset, cap or
+  expiry (nothing in the BRD/PRD/ARCH says otherwise). Needs a story.
+
+## Retention and one-page audit (validate)
+- **Retention has never archived a real row**: no request in the database is older than 3 years (the
+  earliest are 2026), so the first real archive is about 2029. The cron only runs on a Production
+  deployment; the route was exercised locally (401 without the secret, `archived: 0` with it) but not by
+  Vercel Cron.
+- **Vercel cron limits**: there are now two cron jobs (accrual, retention). Check your plan's limits
+  before adding a third; the schedules are monthly, so frequency is fine.
+- **Side effect on GET**: Vercel Cron sends GET, so the retention route changes data on GET, guarded only
+  by the bearer secret (same as accrual). Fails closed.
+- **Decision pending (BA/Legal)**: BRD success criterion says "complete, dated approval record ... at any
+  time", which sits against hiding records after 3 years. If HR must still see them, add a read-only
+  "include archived" toggle to the audit report instead of removing the job.
+- **Pattern**: scheduled jobs share one secret check (`lib/auth/cron-auth.ts`) and an exact-path proxy
+  exemption each; the mutation harness target for a function points at the migration that defines it.

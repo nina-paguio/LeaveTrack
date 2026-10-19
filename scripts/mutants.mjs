@@ -294,4 +294,36 @@ export const targets = {
       "M2 marks nothing read": (f) => f.replace("set read_at = now()", "set read_at = null"),
     },
   },
+
+  // Retention (migration 0008): requests decided more than 3 years ago are soft-deleted.
+  retention: {
+    migration: "supabase/migrations/0008_retention.sql",
+    fn: "soft_delete_expired_requests",
+    test: "supabase/verify-retention.sql",
+    mutants: {
+      "R1 the limit is 2 years (archives records still inside 3 years)": (f) =>
+        f.replace("interval '3 years'", "interval '2 years'"),
+      "R2 the limit is 4 years (keeps records past 3 years)": (f) =>
+        f.replace("interval '3 years'", "interval '4 years'"),
+      "R3 pending requests are archived too": (f) =>
+        f.replace(
+          "and status <> 'pending'\n       and decided_at is not null\n       and decided_at <",
+          "and coalesce(decided_at, created_at) <",
+        ),
+      "R4 the age is counted from when the request was created, not decided": (f) =>
+        f.replace("and decided_at < (p_as_of", "and created_at < (p_as_of"),
+      "R5 a future date is accepted": (f) =>
+        f.replace(
+          "if p_as_of is null or p_as_of > current_date + 1 then",
+          "if p_as_of is null then",
+        ),
+      "R6 a null date is accepted": (f) =>
+        f.replace(
+          "if p_as_of is null or p_as_of > current_date + 1 then",
+          "if p_as_of > current_date + 1 then",
+        ),
+      "R7 already soft-deleted rows are counted again": (f) =>
+        f.replace("where not is_deleted\n       and status", "where status"),
+    },
+  },
 };

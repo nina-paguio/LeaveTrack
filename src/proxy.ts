@@ -4,9 +4,9 @@ import { env } from "@/lib/env";
 import { errorBody } from "@/lib/errors";
 import { canAccess, homeFor } from "@/lib/roles";
 
-// "/api/jobs/accrual" is called by Vercel Cron, which has no login cookie. It authenticates itself with a
-// bearer CRON_SECRET inside the route and fails closed. Exact match only: other /api/jobs/* stay protected.
-const PUBLIC_PATHS = ["/login", "/api/health", "/api/jobs/accrual"];
+// "/api/jobs/accrual" and "/api/jobs/retention" are called by Vercel Cron, which has no login cookie. They authenticate themselves with a
+// bearer CRON_SECRET inside the route and fail closed. Exact match only: other /api/jobs/* stay protected.
+const PUBLIC_PATHS = ["/login", "/api/health", "/api/jobs/accrual", "/api/jobs/retention"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

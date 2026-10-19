@@ -5,6 +5,7 @@ import type { AuditEntry, AuditRepo, AuditSubject } from "@/lib/leave/audit";
 import type { DecideOutcome, DecideRepo, DecisionRefusal } from "@/lib/leave/decide";
 import type { MineRepo } from "@/lib/leave/mine";
 import type { NotificationRepo } from "@/lib/leave/notifications";
+import type { RetentionRepo } from "@/lib/leave/retention";
 import type { CreatedRequest, LeaveRepo, RepoLeaveType, RepoUser } from "@/lib/leave/submit";
 import type { TeamRepo } from "@/lib/leave/team";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
@@ -121,10 +122,18 @@ export function createLeaveRepo(): LeaveRepo &
   DecideRepo &
   AuditRepo &
   AccrualRepo &
-  NotificationRepo {
+  NotificationRepo &
+  RetentionRepo {
   const db = getSupabaseAdmin();
 
   return {
+    /** The 3-year rule and the soft delete are inside soft_delete_expired_requests (migration 0008). */
+    async archiveExpired(asOf) {
+      const { data, error } = await db.rpc("soft_delete_expired_requests", { p_as_of: asOf });
+      if (error) fail("archiveExpired", error.message);
+      return z.number().int().parse(data);
+    },
+
     /** The recipient filter is inside my_notifications (migration 0007), not here. */
     async listNotifications(userId) {
       const { data, error } = await db.rpc("my_notifications", { p_user_id: userId });
