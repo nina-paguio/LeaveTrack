@@ -26,7 +26,7 @@ export default async function NewLeavePage() {
         title="New leave request"
         description="Your manager is notified when you submit."
       />
-      {live ? null : (
+      {live || process.env.NODE_ENV === "production" ? null : (
         <div className="mb-4 max-w-xl">
           <Alert tone="warning">
             No database configured: this form runs on mock data and nothing is saved.

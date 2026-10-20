@@ -32,7 +32,7 @@ export default async function TeamRequestsPage({
           rows.length === 1 ? "request" : "requests"
         } from your direct reports.`}
       />
-      {live ? null : (
+      {live || process.env.NODE_ENV === "production" ? null : (
         <div className="mb-4">
           <Alert tone="warning">No database configured: showing mock data.</Alert>
         </div>

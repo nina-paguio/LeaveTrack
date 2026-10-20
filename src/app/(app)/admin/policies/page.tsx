@@ -24,7 +24,7 @@ export default async function PoliciesPage({
     <>
       <PageHeader
         title="Leave policies"
-        description="Accrual per month by employee and leave type. Editing arrives in Day 1."
+        description="Accrual per month by employee and leave type."
       />
       <PolicyTable rows={items} />
       {rows.length > 0 ? (

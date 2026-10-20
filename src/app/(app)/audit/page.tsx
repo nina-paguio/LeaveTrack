@@ -26,7 +26,7 @@ export default async function AuditPage({
   return (
     <>
       <PageHeader title="Audit report" description="Decision history for one employee." />
-      {data.live ? null : (
+      {data.live || process.env.NODE_ENV === "production" ? null : (
         <div className="mb-4">
           <Alert tone="warning">No database configured: showing mock data.</Alert>
         </div>
