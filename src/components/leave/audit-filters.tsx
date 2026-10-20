@@ -1,14 +1,32 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { IconLoader2 } from "@tabler/icons-react";
 import { AuditResultsSkeleton } from "@/components/leave/audit-skeleton";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { DateField, Select } from "@/components/ui/controls";
-import { FormField } from "@/components/ui/form-field";
+import { FormField, describedBy } from "@/components/ui/form-field";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { auditHref } from "@/lib/leave/audit-query";
+
+const subscribeNever = () => () => {};
+/** False on the server and during hydration, true afterwards (no effect, so no flash of stale state). */
+function useHydrated() {
+  return useSyncExternalStore(
+    subscribeNever,
+    () => true,
+    () => false,
+  );
+}
 
 export interface AuditFiltersProps {
   employees: { id: string; name: string }[];
@@ -25,6 +43,9 @@ export interface AuditFiltersProps {
  * button shows a spinner, a progress bar runs and the old report gives way to a skeleton until the new
  * one arrives. The report itself is always read on the server for one employee, never filtered here.
  *
+ * The employee picker is a searchable combobox (one employee). Until the page has hydrated, and for
+ * anyone without JavaScript, it is the native select, so the plain GET form always works.
+ *
  * Two things keep it usable with a keyboard and honest about the URL:
  * - The inputs follow the URL (controlled, re-synced when the filters in the URL change), so after
  *   Back/Forward the form always shows what the table shows.
@@ -36,6 +57,11 @@ export function AuditFilters({ employees, selectedId, from, to, children }: Audi
   const [pending, startTransition] = useTransition();
   const [values, setValues] = useState({ userId: selectedId, from, to });
   const [synced, setSynced] = useState({ selectedId, from, to });
+  const hydrated = useHydrated();
+  const [triedWithoutEmployee, setTriedWithoutEmployee] = useState(false);
+  const employeeRef = useRef<HTMLInputElement>(null);
+  const employeeError =
+    triedWithoutEmployee && !values.userId ? "Choose an employee to run the report." : undefined;
 
   // Re-sync the inputs when the URL's filters change (Back/Forward). Done during render, the
   // documented alternative to an effect, so there is no flash of stale values.
@@ -47,6 +73,11 @@ export function AuditFilters({ employees, selectedId, from, to, children }: Audi
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending) return;
+    if (!values.userId) {
+      setTriedWithoutEmployee(true);
+      employeeRef.current?.focus();
+      return;
+    }
     startTransition(() => router.push(auditHref(values)));
   }
 
@@ -60,21 +91,35 @@ export function AuditFilters({ employees, selectedId, from, to, children }: Audi
         className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:items-end"
       >
         <div className="col-span-2 sm:col-span-1">
-          <FormField id="audit-employee" label="Employee" required>
-            <Select
-              id="audit-employee"
-              name="userId"
-              value={values.userId}
-              onChange={(e) => setValues((v) => ({ ...v, userId: e.target.value }))}
-              required
-            >
-              <option value="">Choose an employee</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </Select>
+          <FormField id="audit-employee" label="Employee" required error={employeeError}>
+            {hydrated ? (
+              <Combobox
+                id="audit-employee"
+                name="userId"
+                inputRef={employeeRef}
+                options={employees.map((e) => ({ value: e.id, label: e.name }))}
+                value={values.userId}
+                onChange={(userId) => setValues((v) => ({ ...v, userId }))}
+                placeholder="Search for an employee"
+                invalid={!!employeeError}
+                aria-describedby={describedBy("audit-employee", { error: employeeError })}
+              />
+            ) : (
+              <Select
+                id="audit-employee"
+                name="userId"
+                value={values.userId}
+                onChange={(e) => setValues((v) => ({ ...v, userId: e.target.value }))}
+                required
+              >
+                <option value="">Choose an employee</option>
+                {employees.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </Select>
+            )}
           </FormField>
         </div>
         <FormField id="audit-from" label="From">
