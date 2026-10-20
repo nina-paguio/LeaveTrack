@@ -19,8 +19,31 @@ describe("proxy: public paths (no login cookie)", () => {
     expect(passesThrough(proxy(req("/api/health")))).toBe(true);
   });
 
-  it("lets exactly /api/jobs/accrual through, because Vercel Cron has no cookie", () => {
+  it("lets exactly the two cron job paths through, because Vercel Cron has no cookie", () => {
     expect(passesThrough(proxy(req("/api/jobs/accrual")))).toBe(true);
+    expect(passesThrough(proxy(req("/api/jobs/retention")))).toBe(true);
+  });
+
+  it("lets exactly the two Google sign-in paths through, because the person has no session yet", () => {
+    expect(passesThrough(proxy(req("/api/auth/google")))).toBe(true);
+    expect(passesThrough(proxy(req("/api/auth/google/callback")))).toBe(true);
+  });
+
+  it("does NOT open anything else under /api/auth or nearby", async () => {
+    for (const path of [
+      "/api/auth",
+      "/api/auth/",
+      "/api/auth/other",
+      "/api/auth/google/",
+      "/api/auth/google/extra",
+      "/api/auth/google/callback/extra",
+      "/api/auth/googlex",
+      "/api/auth/GOOGLE",
+    ]) {
+      const res = proxy(req(path));
+      expect(passesThrough(res), path).toBe(false);
+      expect(res.status, path).toBe(401);
+    }
   });
 
   it("does NOT open anything else under /api/jobs or nearby", async () => {
@@ -31,6 +54,10 @@ describe("proxy: public paths (no login cookie)", () => {
       "/api/jobs/accrual/extra",
       "/api/jobs/accrual/",
       "/api/jobs/accrualx",
+      "/api/jobs/retention/extra",
+      "/api/jobs/retention/",
+      "/api/jobs/retentionx",
+      "/api/jobs/RETENTION",
       "/api/jobs/ACCRUAL",
       "/api/jobs/../leave-requests",
     ]) {

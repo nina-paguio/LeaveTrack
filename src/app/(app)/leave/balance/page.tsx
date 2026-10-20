@@ -41,7 +41,7 @@ export default async function MyLeavePage({
             : "Balances update with the monthly accrual. No accrual has run yet."
         }
       />
-      {live ? null : (
+      {live || process.env.NODE_ENV === "production" ? null : (
         <div className="mb-4">
           <Alert tone="warning">No database configured: showing mock data.</Alert>
         </div>

@@ -3,7 +3,7 @@
 // broken copy of the function swapped in (create or replace, inside the test's own transaction, which
 // always rolls back), and requires VERIFY_FAILED. Nothing is ever committed.
 //
-//   node scripts/mutate-sql.mjs decide|audit|team|accrual|notify-submit|notify-decide|notify-list|notify-count|notify-read|all
+//   node scripts/mutate-sql.mjs decide|audit|team|accrual|notify-submit|notify-decide|notify-list|notify-count|notify-read|retention|all
 //
 // Needs the Supabase CLI and DATABASE_URL in .env.local (the session-mode port 5432 is derived).
 import { readFileSync } from "node:fs";

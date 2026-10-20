@@ -100,7 +100,7 @@ function measure(W, hasShell) {
   const phone = W <= 767;
   const interactive = [
     ...document.querySelectorAll(
-      "a[href], button, input:not([type=hidden]), select, textarea, [role=button]",
+      "a[href], button, input:not([type=hidden]), select, textarea, [role=button], [role=option]",
     ),
   ].filter(
     (el) => visible(el) && el.getBoundingClientRect().width > 2, // skips the sr-only skip link
@@ -223,6 +223,13 @@ Object.assign(ACTIONS, {
     set("endDate", "2026-12-03");
     set("reason", "Family trip");
     setTimeout(() => document.querySelector('main form button[type="submit"]').click(), 50);
+  },
+  // The audit employee combobox with its list open (typing a letter opens and narrows it).
+  employeeOpen: () => {
+    const el = document.getElementById("audit-employee");
+    el.focus();
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, "a");
+    el.dispatchEvent(new Event("input", { bubbles: true }));
   },
   // A long multi-word Filipino-style name in the header.
   longName: () => {
@@ -351,7 +358,7 @@ if (process.argv.includes("--shared")) {
   SCENARIOS.push(
     { path: "/login", role: null, name: "login", states: [], shell: false },
     { path: "/team/requests", role: "manager", name: "team-queue", states: [] },
-    { path: "/audit", role: "hr_admin", name: "audit", states: [] },
+    { path: "/audit", role: "hr_admin", name: "audit", states: ["employeeOpen"] },
     { path: "/admin/policies", role: "hr_admin", name: "policies", states: [] },
   );
 }
