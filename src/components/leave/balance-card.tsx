@@ -21,7 +21,7 @@ export function BalanceCard({ balance }: { balance: BalanceView }) {
           </p>
         </>
       ) : (
-        <p className="mt-1 text-sm text-muted">No limit. Unpaid leave doesn't use your balance.</p>
+        <p className="mt-1 text-sm text-muted">No limit. Unpaid leave doesn&apost use your balance.</p>
       )}
     </Card>
   );
