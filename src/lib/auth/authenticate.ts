@@ -60,3 +60,59 @@ export async function authenticate(
 
   return { ok: true, email: verified, role };
 }
+
+export interface GoogleAuthDeps {
+  /**
+   * Trades the one-time code from the redirect (plus this browser's PKCE verifier) for the Google
+   * account's email and whether Google has verified it. Resolves null when the code is not accepted.
+   * Rejects when the provider is unreachable.
+   */
+  exchangeCode(
+    code: string,
+    verifier: string,
+  ): Promise<{ email: string; emailVerified: boolean } | null>;
+  /** The role stored in the users table for this email, or null if the person is not in it. */
+  resolveRole(email: string): Promise<Role | null>;
+}
+
+/**
+ * Google sign-in decision, with no I/O of its own (same rules as `authenticate`).
+ *
+ * - Only an email Google reports as verified counts: an unverified address proves nothing.
+ * - The company domain (when one is set) and the users table both still apply. Having a Google account
+ *   is never enough: a person with no users row is refused with the same answer as everything else.
+ * - The role comes ONLY from the users table, never from anything Google or Supabase say about the user.
+ */
+export async function authenticateGoogle(
+  deps: GoogleAuthDeps,
+  code: unknown,
+  verifier: unknown,
+  allowedDomain?: string,
+): Promise<AuthResult> {
+  if (typeof code !== "string" || !code || typeof verifier !== "string" || !verifier) {
+    return { ok: false, reason: "refused" };
+  }
+
+  let identity: { email: string; emailVerified: boolean } | null;
+  try {
+    identity = await deps.exchangeCode(code, verifier);
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+  if (!identity || identity.emailVerified !== true) return { ok: false, reason: "refused" };
+
+  const email = normalizeEmail(identity.email);
+  if (!isPlausibleEmail(email) || (allowedDomain && !isCompanyEmail(email, allowedDomain))) {
+    return { ok: false, reason: "refused" };
+  }
+
+  let role: Role | null;
+  try {
+    role = await deps.resolveRole(email);
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+  if (!role) return { ok: false, reason: "refused" };
+
+  return { ok: true, email, role };
+}

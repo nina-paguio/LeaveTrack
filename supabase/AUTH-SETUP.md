@@ -25,8 +25,21 @@ run against production**.
 
 ## 4. Public deployment
 Turn on Vercel Deployment Protection, use strong passwords, and keep real employee data out until the
-sign-in is reviewed. Not needed for password sign-in: Site URL and redirect allow-list (magic link / SSO)
+sign-in is reviewed. Not needed for password sign-in: Site URL and redirect allow-list (needed only for Google, section 5)
 and custom SMTP.
+
+## 5. Optional: Sign in with Google (ADR-LeaveTrack-E006)
+Password sign-in keeps working. To add the Google button:
+1. Google Cloud Console → APIs & Services → Credentials → **OAuth client ID** (type: Web application).
+   Under "Authorized redirect URIs" add Supabase's callback: `https://<project>.supabase.co/auth/v1/callback`.
+2. Supabase → Authentication → Providers → **Google**: enable it and paste the client id and secret.
+   They live only here, never in the repo or in `.env`. **"Allow new users to sign up" stays OFF.**
+3. Supabase → Authentication → URL Configuration: set **Site URL** to the app's address and add
+   `<app address>/api/auth/google/callback` to the **Redirect URLs** allow-list, once per environment
+   (for example `http://localhost:3000/...` and the Vercel domain). A missing entry breaks sign-in only there.
+4. Set `GOOGLE_SIGN_IN_ENABLED=true` (and optionally `ALLOWED_EMAIL_DOMAIN`) in `.env.local` and Vercel.
+5. The person still needs a Supabase Auth user (section 1) and a `users` row (section 2). Supabase links
+   their Google account to that user by email; a Google account with no such user is refused.
 
 ## Optional: create the three auth users from the command line
 ```

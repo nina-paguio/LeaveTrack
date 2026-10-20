@@ -6,7 +6,16 @@ import { canAccess, homeFor } from "@/lib/roles";
 
 // "/api/jobs/accrual" and "/api/jobs/retention" are called by Vercel Cron, which has no login cookie. They authenticate themselves with a
 // bearer CRON_SECRET inside the route and fail closed. Exact match only: other /api/jobs/* stay protected.
-const PUBLIC_PATHS = ["/login", "/api/health", "/api/jobs/accrual", "/api/jobs/retention"];
+// "/api/auth/google" and its "/callback" are the two steps of Google sign-in: the person has no session yet.
+// Each checks everything itself (PKCE cookie, verified email, users table) and fails closed. Exact match only.
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/health",
+  "/api/jobs/accrual",
+  "/api/jobs/retention",
+  "/api/auth/google",
+  "/api/auth/google/callback",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

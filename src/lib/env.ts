@@ -16,6 +16,9 @@ const schema = z.object({
   SESSION_SECRET: z.string().optional(),
   // Optional extra restriction: when set, only addresses at exactly this domain may sign in.
   ALLOWED_EMAIL_DOMAIN: z.string().optional(),
+  // "true" shows "Sign in with Google" and turns the Google routes on. The Google client id and secret
+  // live in the Supabase dashboard, not here.
+  GOOGLE_SIGN_IN_ENABLED: z.string().optional(),
   DATABASE_URL: z.string().optional(),
   // Optional on purpose: env.ts is imported everywhere (including proxy.ts), and Day 0 must boot
   // without credentials. Code that needs them goes through lib/supabase/server.ts.

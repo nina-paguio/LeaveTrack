@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { authenticate, MAX_PASSWORD_LENGTH, type AuthDeps } from "@/lib/auth/authenticate";
+import {
+  authenticate,
+  authenticateGoogle,
+  MAX_PASSWORD_LENGTH,
+  type AuthDeps,
+  type GoogleAuthDeps,
+} from "@/lib/auth/authenticate";
 import { classifyPasswordError } from "@/lib/auth/password-errors";
 import type { Role } from "@/types/domain";
 
@@ -93,5 +99,97 @@ describe("classifyPasswordError", () => {
     expect(classifyPasswordError({ status: 503 })).toBe("unavailable");
     expect(classifyPasswordError({ status: 0 })).toBe("unavailable");
     expect(classifyPasswordError({})).toBe("unavailable");
+  });
+});
+
+describe("authenticateGoogle", () => {
+  const google = (over: Partial<GoogleAuthDeps> = {}) =>
+    ({
+      exchangeCode: vi.fn(async () => ({ email: "Maria@Example.com", emailVerified: true })),
+      resolveRole: vi.fn(async (): Promise<Role | null> => "manager"),
+      ...over,
+    }) as GoogleAuthDeps & {
+      exchangeCode: ReturnType<typeof vi.fn>;
+      resolveRole: ReturnType<typeof vi.fn>;
+    };
+
+  it("signs in with the role from the users table", async () => {
+    const d = google();
+    expect(await authenticateGoogle(d, "code-1", "verifier-1")).toEqual({
+      ok: true,
+      email: "maria@example.com",
+      role: "manager",
+    });
+    expect(d.exchangeCode).toHaveBeenCalledWith("code-1", "verifier-1");
+    expect(d.resolveRole).toHaveBeenCalledWith("maria@example.com");
+  });
+
+  it("refuses without a code or without this browser's verifier, and never calls Google", async () => {
+    const d = google();
+    for (const [code, verifier] of [
+      [null, "v"],
+      ["", "v"],
+      ["c", undefined],
+      ["c", ""],
+      [42, "v"],
+    ] as const) {
+      expect(await authenticateGoogle(d, code, verifier)).toEqual(REFUSED);
+    }
+    expect(d.exchangeCode).not.toHaveBeenCalled();
+    expect(d.resolveRole).not.toHaveBeenCalled();
+  });
+
+  it("refuses an email Google has not verified, before the users table is read", async () => {
+    const d = google({
+      exchangeCode: vi.fn(async () => ({ email: "a@example.com", emailVerified: false })),
+    });
+    expect(await authenticateGoogle(d, "c", "v")).toEqual(REFUSED);
+    expect(d.resolveRole).not.toHaveBeenCalled();
+  });
+
+  it("refuses a code that was not accepted", async () => {
+    const d = google({ exchangeCode: vi.fn(async () => null) });
+    expect(await authenticateGoogle(d, "c", "v")).toEqual(REFUSED);
+    expect(d.resolveRole).not.toHaveBeenCalled();
+  });
+
+  it("refuses a Google account that is not in the users table (a Google account is never enough)", async () => {
+    const d = google({ resolveRole: vi.fn(async () => null) });
+    expect(await authenticateGoogle(d, "c", "v")).toEqual(REFUSED);
+  });
+
+  it("enforces the company domain exactly when one is set", async () => {
+    const d = google({
+      exchangeCode: vi.fn(async () => ({ email: "a@gmail.com", emailVerified: true })),
+    });
+    expect(await authenticateGoogle(d, "c", "v", "example.com")).toEqual(REFUSED);
+    expect(d.resolveRole).not.toHaveBeenCalled();
+    const ok = google({
+      exchangeCode: vi.fn(async () => ({ email: "a@example.com", emailVerified: true })),
+    });
+    expect((await authenticateGoogle(ok, "c", "v", "example.com")).ok).toBe(true);
+    const lookalike = google({
+      exchangeCode: vi.fn(async () => ({ email: "a@evil-example.com", emailVerified: true })),
+    });
+    expect(await authenticateGoogle(lookalike, "c", "v", "example.com")).toEqual(REFUSED);
+  });
+
+  it("reports unavailable (not refused) when Google or the database cannot be reached", async () => {
+    const down = google({ exchangeCode: vi.fn(async () => Promise.reject(new Error("down"))) });
+    expect(await authenticateGoogle(down, "c", "v")).toEqual({ ok: false, reason: "unavailable" });
+    const noDb = google({ resolveRole: vi.fn(async () => Promise.reject(new Error("no db"))) });
+    expect(await authenticateGoogle(noDb, "c", "v")).toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it("takes the role only from the users table, never from anything the provider returns", async () => {
+    const d = google({
+      exchangeCode: vi.fn(async () => ({
+        email: "a@example.com",
+        emailVerified: true,
+        role: "hr_admin",
+      })),
+      resolveRole: vi.fn(async (): Promise<Role | null> => "employee"),
+    });
+    expect(await authenticateGoogle(d, "c", "v")).toMatchObject({ role: "employee" });
   });
 });

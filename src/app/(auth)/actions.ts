@@ -3,10 +3,13 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { authenticate } from "@/lib/auth/authenticate";
+import { clientIp } from "@/lib/auth/client-ip";
 import { normalizeEmail } from "@/lib/auth/email";
+import { REFUSED_MESSAGE, UNAVAILABLE_MESSAGE } from "@/lib/auth/messages";
 import { clearAttempts, tooManyAttempts } from "@/lib/auth/rate-limit";
 import { resolveUserRole } from "@/lib/auth/resolve-user";
-import { createSessionToken, isUsableSecret } from "@/lib/auth/session-token";
+import { setSessionCookie } from "@/lib/auth/session-cookie";
+import { isUsableSecret } from "@/lib/auth/session-token";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { homeFor } from "@/lib/roles";
@@ -16,10 +19,8 @@ export interface LoginState {
   error?: string;
 }
 
-// One message for every refusal (wrong password, unknown person, not in users, throttled) so the form
-// never reveals which company emails exist.
-const REFUSED: LoginState = { error: "We couldn't sign you in with those details." };
-const UNAVAILABLE: LoginState = { error: "Sign-in is not available right now. Try again soon." };
+const REFUSED: LoginState = { error: REFUSED_MESSAGE };
+const UNAVAILABLE: LoginState = { error: UNAVAILABLE_MESSAGE };
 
 /**
  * EMAIL + PASSWORD SIGN-IN (ADR-LeaveTrack-E003). Supabase Auth checks the password (it stores only a
@@ -38,7 +39,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   }
 
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  const ip = clientIp(h);
   const email = normalizeEmail(formData.get("email"));
   // Best effort on serverless (per instance); Supabase applies its own limits as well.
   if (tooManyAttempts(`ip:${ip}`) || tooManyAttempts(`email:${email}`)) {
@@ -64,22 +65,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   clearAttempts(`ip:${ip}`);
   clearAttempts(`email:${email}`);
 
-  const store = await cookies();
-  store.set(
-    env.SESSION_COOKIE_NAME,
-    createSessionToken(
-      { email: result.email, role: result.role },
-      secret,
-      env.SESSION_MAX_AGE_SECONDS,
-    ),
-    {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: env.NODE_ENV === "production",
-      path: "/",
-      maxAge: env.SESSION_MAX_AGE_SECONDS,
-    },
-  );
+  await setSessionCookie(result.email, result.role, secret);
   logger.info("sign-in", { role: result.role });
 
   redirect(homeFor(result.role));
