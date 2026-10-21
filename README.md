@@ -36,7 +36,7 @@ Open http://localhost:3000 and sign in at `/login`.
 | Manager  | Paolo Reyes     | `paolo@example.com` | `manager2`     |
 | Employee | Ana Cruz        | `ana@example.com`   | `employeepass` |
 
-Maria approves Ana, Ben and Carla; Paolo approves Dan, Ella, Faye and Gio. The other six employees are seeded in `users` but have no password listed; create Auth users for them to sign in.
+Maria approves Ana, Ben and Carla; Paolo approves Dan, Ella, Faye and Gio. The other six employees are seeded in `users` but have no password listed.
 
 These are **throwaway dev passwords**. Never reuse them, and never create them in production.
 
