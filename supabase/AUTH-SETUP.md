@@ -15,7 +15,7 @@ the app never sees them after the check.
 
 ## 2. The `users` table
 Each Supabase user needs a matching row (same email, lower-case) with the right `role` and, for an
-employee, `manager_id` pointing at their manager. `seed.dev.sql` has the three demo rows and **must never
+employee, `manager_id` pointing at their manager. `seed.dev.sql` has the demo rows (10 people: 1 HR, 2 managers, 7 employees; `seed.dev.requests.sql` adds 20 sample requests) and **must never
 run against production**.
 
 ## 3. Environment variables (`.env.local` and Vercel)
