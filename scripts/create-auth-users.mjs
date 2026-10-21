@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Creates the three demo Supabase Auth users (HR admin, manager, employee) with Auto Confirm, using the
+// Creates the four demo Supabase Auth users (HR admin, two managers, one employee) with Auto Confirm, using the
 // SECRET key. Run it yourself against the project you mean to change; nothing runs it automatically.
 // Passwords come from the environment, are never printed, and Supabase stores only a salted hash.
 // It creates auth users only: the matching rows in public.users must exist too (see supabase/AUTH-SETUP.md).
@@ -18,6 +18,11 @@ const accounts = [
     "MANAGER",
     process.env.SEED_EMAIL_MANAGER ?? "maria@example.com",
     process.env.SEED_PASSWORD_MANAGER,
+  ],
+  [
+    "MANAGER2",
+    process.env.SEED_EMAIL_MANAGER2 ?? "paolo@example.com",
+    process.env.SEED_PASSWORD_MANAGER2,
   ],
   [
     "EMPLOYEE",

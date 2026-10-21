@@ -2,7 +2,7 @@
 
 Self-service leave requests, scoped manager approvals and an auditable decision record.
 
-Day 0 scaffold: runs with **no credentials**, mock sign-in, mock data. See `AGENTS.md` for the rules.
+Runs with **no credentials** (mock sign-in, mock data) or against a Supabase project (email + password sign-in, optional Google). See `AGENTS.md` for the rules.
 
 ## Requirements
 
@@ -15,13 +15,30 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000, pick a role on the sign-in page (any email/password works) and explore.
+Open http://localhost:3000 and sign in at `/login`.
 
-| Role     | Can open                                                     |
-| -------- | ------------------------------------------------------------ |
-| Employee | dashboard, `/leave/new`, `/leave/balance`, `/leave/requests` |
-| Manager  | the above plus `/team/requests`                              |
-| HR Admin | dashboard, `/audit`, `/admin/policies`                       |
+| Role     | Can open                                                      |
+| -------- | ------------------------------------------------------------- |
+| Employee | `/leave/new`, `/leave/balance` (landing)                      |
+| Manager  | the above plus `/team/requests` (landing)                     |
+| HR Admin | `/audit` (landing, one employee at a time), `/admin/policies` |
+
+## Login credentials
+
+**Without Supabase configured (fresh clone):** mock sign-in. Pick a role on the sign-in page; any email and password works.
+
+**With Supabase configured (including the Vercel deployment):** the demo accounts below can be used to sign in on Vercel. The role always comes from the `users` table. There is no sign-up and no "forgot password"; an admin creates accounts and resets passwords (`supabase/AUTH-SETUP.md`).
+
+| Role     | Name            | Email               | Password       |
+| -------- | --------------- | ------------------- | -------------- |
+| HR Admin | Hana Villanueva | `hana@example.com`  | `hradminpass`  |
+| Manager  | Maria Santos    | `maria@example.com` | `managerpass`  |
+| Manager  | Paolo Reyes     | `paolo@example.com` | `manager2`     |
+| Employee | Ana Cruz        | `ana@example.com`   | `employeepass` |
+
+Maria approves Ana, Ben and Carla; Paolo approves Dan, Ella, Faye and Gio. The other six employees are seeded in `users` but have no password listed; create Auth users for them to sign in.
+
+These are **throwaway dev passwords**. Never reuse them, and never create them in production.
 
 ## Scripts
 
@@ -52,8 +69,7 @@ Copy `.env.example` to `.env.local`. Every variable is optional on Day 0.
 | `migrations/0006_monthly_accrual.sql`       | `run_monthly_accrual()`, the `last_accrued_month` marker and the `accrual_runs` log                                                                               |
 | `migrations/0007_notifications.sql`         | `notifications` table (RLS on); submit/decide now write the in-app notification; `my_notifications()`, `unread_notification_count()`, `mark_notifications_read()` |
 | `migrations/0008_retention.sql`             | `soft_delete_expired_requests()`: soft-deletes requests decided more than 3 years ago (rows stay; the app stops showing them); service_role only                  |
-| `seed.sql`                                  | Reference data only (3 leave types). Safe in every environment.                                                                                                   |
-| `seed.dev.sql`                              | Mock users, policies, balances. **Dev only, never production.**                                                                                                   |
+| `seed.sql`                                  | Reference data only (3 leave types). Safe in every environment.                                                                                                   |     |
 | `verify-accrual.sql`                        | Rolled-back test of the accrual: exact amounts, same-month no-op, per-row marker, bad months, run log                                                             |
 | `verify-audit.sql`                          | Rolled-back test of the audit report: exactness, soft-delete exclusion, 3+ year retention, privacy, date range                                                    |
 | `verify-decide.sql`                         | Rolled-back test of approve, reject, scope, exactly-once, roles, Unpaid, day rule and self-approval                                                               |

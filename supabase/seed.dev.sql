@@ -15,7 +15,9 @@ from (values
   ('Ben Lim',     'ben@example.com',   'maria@example.com'),
   ('Carla Dizon', 'carla@example.com', 'maria@example.com'),
   ('Dan Ocampo',  'dan@example.com',   'paolo@example.com'),
-  ('Ella Tan',    'ella@example.com',  'paolo@example.com')
+  ('Ella Tan',    'ella@example.com',  'paolo@example.com'),
+  ('Faye Mendoza', 'faye@example.com',  'paolo@example.com'),
+  ('Gio Navarro',  'gio@example.com',   'paolo@example.com')
 ) as v (name, email, manager_email)
 join users m on m.email = v.manager_email
 on conflict (email) do nothing;
